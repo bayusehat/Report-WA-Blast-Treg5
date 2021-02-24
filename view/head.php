@@ -175,11 +175,18 @@
                             <a href="index.php" class="waves-effect">
                                 <i class="dripicons-meter"></i>
                                 <!-- <span class="badge badge-info badge-pill float-right">9+</span>  -->
-                                <span> Report WA Blast </span>
+                                <span> Report Per-Witel </span>
                             </a>
                         </li>
                         <li>
-                            <a href="import_excel.php" class="waves-effect"><i class="dripicons-calendar"></i><span> Import Excel </span></a>
+                            <a href="report_pertanggal.php" class="waves-effect">
+                                <i class="dripicons-calendar"></i>
+                                <!-- <span class="badge badge-info badge-pill float-right">9+</span>  -->
+                                <span> Report Per-tanggal </span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="import_excel.php" class="waves-effect"><i class="dripicons-archive"></i><span> Import Excel </span></a>
                         </li>
                         <!-- <li>
                             <a href="javascript:void(0);" class="waves-effect"><i class="dripicons-mail"></i><span> Email <span class="float-right menu-arrow"><i class="mdi mdi-chevron-right"></i></span> </span></a>

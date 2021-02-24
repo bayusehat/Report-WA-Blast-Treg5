@@ -19,6 +19,7 @@
     <script src="assets/js/waves.min.js"></script>
     <script src="https://cdn.datatables.net/1.10.23/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.10.23/js/dataTables.bootstrap4.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedcolumns/3.3.1/js/dataTables.fixedColumns.js"></script>
 
 
     <!-- Jquery-Ui -->
@@ -49,6 +50,16 @@
 						}
 					}
 				} );
+
+                //Table Pertanggal
+                $('#reportPertanggal').DataTable({
+                    "scrollX": true,
+                    "searching": false,
+                    "paging": false,
+                    fixedColumns: {
+                        leftColumns: 1
+                    }
+		        });
 			} );
     </script>
 

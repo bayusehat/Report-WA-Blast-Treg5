@@ -29,24 +29,21 @@ if(isset($_POST['submit'])){
             $periode = $sheetData[$i]['0'];
             $nd      = $sheetData[$i]['1'];
             $cd      = $sheetData[$i]['2'];
-            if($nd == ''){
-                $query = "INSERT INTO UPSPEED_UPLOAD (PERIODE_DAPROS,ND_INTERNET,CREATED_DAPROS) 
-                VALUES ('$periode','$nd','$cd')";
+            $dd      = $sheetData[$i]['3'];
+            if($nd){
+                $query = "INSERT INTO UPSPEED_UPLOAD (PERIODE_DAPROS,ND_INTERNET,CWITEL,CREATED_DAPROS) 
+                VALUES ('$periode','$nd','$cd','$dd')";
                 $db->runQuery($query);
             }
         }
-        echo '<script>
-                windows.alert("Upload berhasil!");
-            </script>';
-        header("Location: import_excel.php"); 
+        header("Location: import_excel.php?m=1"); 
     }else{
         echo '<script>
                 windows.alert("Terjadi kesalahan, sila coba lagi!");
             </script>';
-        header("Location: import_excel_input.php"); 
+        header("Location: import_excel_input.php?m=2"); 
     }
 }
-// exit;
 ?>
 <?php
 require 'view/head.php';

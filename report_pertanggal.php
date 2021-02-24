@@ -2,37 +2,76 @@
 require 'init.php';
 $db = DB::getInstance();
 
-$tgl = isset($_GET['tgl']) ? $_GET['tgl'] : null;
+$bulan = isset($_GET['bulan']) ? $_GET['bulan'] : '01';
+$tahun = isset($_GET['tahun']) ? $_GET['tahun'] : date('Y');
 
-if($tgl){
-    $tgl_report = "Y.CREATED::TEXT LIKE '%$tgl%'";
-}else{
-    $tgl_report = "1=1";
-}
+$periode = $tahun.'-'.$bulan;
 
 $query = "
-    SELECT X.AREA,
-    SUM(CASE WHEN Y.STATUS_OPLANG = 1 THEN 1 ELSE 0 END) SUKSES,
-    SUM(CASE WHEN Y.STATUS_OPLANG = 2 THEN 1 ELSE 0 END) ANOMALI,
-    SUM(CASE WHEN Y.STATUS_OPLANG = 3 THEN 1 ELSE 0 END) GAGAL,
-    SUM(CASE WHEN Y.STATUS_OPLANG = 0 THEN 1 ELSE 0 END) BELUM_INPUT,
-    COUNT(*) DAPROS
-    FROM(
-        SELECT A.*, B.PENAWARAN, C.SPEED_S UP_SPEED, B.PRICE + A.HARGA_ADDON - A.ABONEMEN HARGA, SUBSTRING(A.PERIODE_TAG,5,6) BULAN_TAGIHAN FROM(
-        SELECT A.*,B.*,C.ADDON, CASE WHEN C.PRICE IS NOT NULL THEN C.PRICE ELSE 0 END HARGA_ADDON,D.AREA 
-            FROM HP A 
-            LEFT JOIN UPSPEED_MASTER B ON A.ND_INTERNET = B.ND_INTERNET
-            LEFT JOIN ADDONS C ON B.ADDON_ID = C.ID
-            LEFT JOIN AREAS D ON  B.CWITEL = D.CWITEL 
-            WHERE B.USER_CALL = 56
-    ) A LEFT JOIN OFFERS B ON A.OFFER_ID = B.ID
-        LEFT JOIN SPEEDS C ON B.SPEED_ID = C.ID) X
-    LEFT JOIN 
-    UPSPEED_NEW Y ON X.HP = Y.NOMOR_HP
-    WHERE $tgl_report
-    GROUP BY X.AREA
-    ORDER BY X.AREA
-";
+SELECT A.WITEL,";
+for ($v=1; $v <= 31 ; $v++) { 
+   if($v < 10){
+       $v = '0'.$v;
+   }else{
+       $v = $v;
+   }
+   if($v === 31){
+    $query .= "COALESCE(AGREE$v,0)A$v,COALESCE(DP$v,0)U$v";
+   }else{
+      $query .= "COALESCE(AGREE$v,0)A$v,COALESCE(DP$v,0)U$v,"; 
+   }
+}
+$query.= "
+FROM(
+ SELECT WITEL,";
+
+ for ($x=1; $x <= 31 ; $x++) { 
+    if($x < 10){
+        $x = '0'.$x;
+    }else{
+        $x = $x;
+    }
+    if($x === 31){
+      $query .= "SUM(CASE WHEN DA = '$x' AND STATUS_OPLANG = 1 OR STATUS_OPLANG = 2 OR STATUS_OPLANG = 3 THEN 1 ELSE 0 END) AGREE$x";
+    }else{
+       $query .= "SUM(CASE WHEN DA = '$x' AND STATUS_OPLANG = 1 OR STATUS_OPLANG = 2 OR STATUS_OPLANG = 3 THEN 1 ELSE 0 END) AGREE$x,"; 
+    }
+ }
+
+ $query .= "
+ FROM(
+  SELECT AREA WITEL, TO_CHAR(CREATED,'DD') DA, NOMOR_INET, STATUS_OPLANG
+  FROM UPSPEED_NEW A
+  LEFT JOIN AREAS B ON A.CWITEL = B.CWITEL
+  WHERE CREATED::TEXT LIKE '%$periode%'
+ )A
+ GROUP BY WITEL 
+ ORDER BY WITEL
+) A LEFT JOIN (
+ SELECT WITEL, ";
+ for ($y=1; $y <= 31 ; $y++) { 
+    if($y < 10){
+        $y = '0'.$y;
+    }else{
+        $y = $y;
+    }
+    if($y === 31){
+      $query .= "SUM(CASE WHEN DU = '$y' THEN 1 ELSE 0 END) DP$y";
+    }else{
+       $query .= "SUM(CASE WHEN DU = '$y' THEN 1 ELSE 0 END) DP$y,"; 
+    }
+ }    
+
+ $query.= "
+ FROM(
+  SELECT AREA WITEL, TO_CHAR(CREATED_DAPROS,'DD') DU, ND_INTERNET
+  FROM UPSPEED_UPLOAD A
+  LEFT JOIN AREAS B ON A.CWITEL::INTEGER = B.CWITEL
+  WHERE CREATED_DAPROS::TEXT LIKE '%$periode%'
+ ) B 
+ GROUP BY WITEL
+ ORDER BY WITEL
+) B ON A.WITEL = B.WITEL";
 
 $data = $db->runQuery($query)->fetchAll();
 ?>
@@ -41,6 +80,14 @@ $data = $db->runQuery($query)->fetchAll();
     <?php
         require 'view/head.php';
     ?>
+    <style>
+        .center{
+            text-align:center;
+        }
+        .rght{
+            text-align:right;
+        }
+    </style>
         <!-- ============================================================== -->
         <!-- Start right Content here -->
         <!-- ============================================================== -->
@@ -59,7 +106,7 @@ $data = $db->runQuery($query)->fetchAll();
                                         <li class="breadcrumb-item">
                                             <a href="javascript:void(0);">CCare</a>
                                         </li>
-                                        <li class="breadcrumb-item active">Report WA Blast</li>
+                                        <li class="breadcrumb-item active">Report WA Pertanggal</li>
                                     </ol>
                                 </div>
                             </div>
@@ -79,50 +126,90 @@ $data = $db->runQuery($query)->fetchAll();
                             <div class="card">
                                 <div class="card-body">
                                     <div class="row">
+                                        <form method="get" style="width:100%">
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label for="">TAHUN</label>
+                                                    <select name="tahun" id="tahun" class="form-control">
+                                                        <option value="2020" <?php if($tahun == '2020'){ echo 'selected';}else{echo '';}?>>2020</option>
+                                                        <option value="2021" <?php if($tahun == '2021'){ echo 'selected';}else{echo '';}?>>2021</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                <label for="">BULAN</label>
+                                                <select name="bulan" id="bulan" class="form-control">
+                                                    <?php
+                                                        for ($m=1; $m <= 12 ; $m++) { 
+                                                            if($m<10){
+                                                                $m = '0'.$m;
+                                                            }else{
+                                                                $m = $m;
+                                                            }
+                                                            if($bulan == $m){ $bs =  'selected';}else{ $bs = '';}
+                                                            echo '<option value="'.$m.'" '.$bs.'>'.$m.'</option>';
+                                                        }
+                                                    ?>
+                                                </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label for="">SC</label>
+                                                    <input type="submit" class="btn btn-success" value="SUMBIT">
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <div class="row">
                                         <div class="col-md-12 col-sm-12">
-                                            <table class="table table-striped table-bordered">
+                                            <table class="table table-sm table-bordered table-striped" id="reportPertanggal">
                                                 <thead>
                                                     <tr>
-                                                        <th>NO</th>
-                                                        <th>WITEL</th>
-                                                        <th>DAPROS</th>
-                                                        <th>AGREE</th>
-                                                        <th>SUKSES</th>
-                                                        <th>ANOMALI</th>
-                                                        <th>GAGAL</th>
-                                                        <th>BELUM INPUT</th>                                                       
-                                                        <th>ACH</th>
+                                                        <th rowspan="2" class="center">WITEL</th>
+                                                        <?php
+                                                            for ($i=1; $i <= 31; $i++) { 
+                                                                echo '<th colspan="2" class="center">'.$i.'</th>';
+                                                            }
+                                                        ?>
+                                                    </tr>
+                                                    <tr>
+                                                        <?php
+                                                            for ($k=1; $k <= 31; $k++) {
+                                                        ?>
+                                                                <th>AGREE</th>
+                                                                <th>DAPROS</th>
+                                                        <?php 
+                                                            }
+                                                        ?>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     <?php
-                                                    $tdapros = $tagree = $tsukses = $tanomali = $tgagal = $tbelum = $tach = 0;
-                                                        foreach($data as $i => $v){
-                                                        $agree = $v['sukses'] + $v['anomali'] + $v['gagal'];
+                                                        foreach ($data as $q => $c) {
                                                     ?>
-                                                        <tr>
-                                                            <td><?= ++$i; ?></td>
-                                                            <td><?= $v['area'];?></td>
-                                                            <td><?= number_format($v['dapros']);?></td>
-                                                            <td><?= number_format($agree);?></td>
-                                                            <td><?= number_format($v['sukses']); ?></td>
-                                                            <td><?= number_format($v['anomali']); ?></td>
-                                                            <td><?= number_format($v['gagal']); ?></td>
-                                                            <td><?= number_format($v['belum_input']); ?></td>
-                                                            <td><?= number_format($agree / (float) $v['dapros'] * 100,2);?> %</td>
-                                                        </tr>
+                                                    <tr>
+                                                        <td><?= $c['witel'];?></td>
+                                                        <?php
+                                                            for ($b=1; $b <= 31 ; $b++) {
+                                                                if($b<10){
+                                                                    $b = '0'.$b;
+                                                                }else{
+                                                                    $b = $b;
+                                                                } 
+                                                        ?>
+                                                            <td class="rght"><?= number_format($c['a'.$b]);?></td>
+                                                            <td class="rght"><?= number_format($c['u'.$b]);?></td>
+                                                        <?php
+                                                            }
+                                                        ?>
+                                                    </tr>
                                                     <?php
-                                                        $tdapros += $v['dapros'];
-                                                        $tagree += $agree;
-                                                        $tsukses += $v['sukses'];
-                                                        $tanomali += $v['anomali'];
-                                                        $tgagal += $v['gagal'];
-                                                        $tbelum += $v['belum_input'];
-                                                        $tach += number_format($agree / (float) $v['dapros'] * 100,2);
                                                         }
                                                     ?>
                                                 </tbody>
-                                                <tfoot>
+                                                <!-- <tfoot>
                                                     <tr>
                                                         <th colspan="2">TOTAL</th>
                                                         <th><?= number_format($tdapros);?></th>
@@ -133,7 +220,7 @@ $data = $db->runQuery($query)->fetchAll();
                                                         <th><?= number_format($tbelum);?></th>
                                                         <th><?= number_format($tach,2);?> %</th>
                                                     </tr>
-                                                </tfoot>
+                                                </tfoot> -->
                                             </table>
                                         </div>
                                     </div>
